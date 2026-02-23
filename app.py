@@ -3,8 +3,6 @@ import re
 from datetime import datetime, timedelta
 from statistics import mean, median
 
-# -*- coding: utf-8 -*-
-
 def calculate_net(price):
     if price < 57:
         return price * 0.97 - 8.5
@@ -64,9 +62,8 @@ def calculate_avg_days(sales_list):
     return round(avg, 1)
 
 # ────────────────────────────────────────────────
-#                  STREAMLIT APP
+# STREAMLIT APP
 # ────────────────────────────────────────────────
-
 st.set_page_config(page_title="Sneaker Analyzer", layout="wide")
 st.title("Sneaker Sales Analyzer")
 st.caption("Paste StockX sales data → filter if needed → analyze")
@@ -79,13 +76,13 @@ def clear_data():
 
 st.sidebar.header("Settings")
 use_price_filter = st.sidebar.checkbox("Apply price filter (exclude lower sales)", value=False)
-show_last_10 = st.sidebar.checkbox("Also show Last 10 velocity", value=True)
+show_last_10 = st.sidebar.checkbox("Also show Last 10 velocity & net", value=True)
 
 data = st.text_area(
     "Paste Sales Data Here",
     height=520,
     key="sales_input",
-    placeholder="02/10/26, 1:47 AMUK 7.5\n£109\n..."
+    placeholder="02/10/26, 1:47 AM UK 7.5\n£109\n..."
 )
 
 st.subheader("Filter Options")
@@ -132,7 +129,7 @@ if analyze_clicked:
                 min_p = min(prices)
                 max_p = max(prices)
                 
-                # Simple trend: first half vs second half of sorted list
+                # Simple trend: first half vs second half
                 sorted_recent = sorted(recent_sales, key=lambda x: x['date'])
                 mid = n // 2
                 first_half_avg = mean([s['price'] for s in sorted_recent[:mid]]) if mid > 0 else avg_price
@@ -143,14 +140,16 @@ if analyze_clicked:
                 avg_net = mean(calculate_net(p) for p in prices)
                 
                 last_10_sales = sorted(recent_sales, key=lambda x: x['date'], reverse=True)[:10]
-                avg_net_last10 = mean(calculate_net(s['price']) for s in last_10_sales)
+                avg_net_last10 = mean(calculate_net(s['price']) for s in last_10_sales) if len(last_10_sales) > 0 else None
                 
                 avg_days_all = calculate_avg_days(recent_sales)
                 
                 avg_days_10 = calculate_avg_days(last_10_sales) if show_last_10 and len(last_10_sales) >= 2 else None
                 
                 target_roi = get_target_roi(avg_days_all) if avg_days_all is not None else 0.45
-                max_pay = round(avg_net_last10 / (1 + target_roi), 2) if avg_days_all is not None else "N/A"
+                
+                # CHANGED: use avg_net (120-day average) instead of last-10
+                max_pay = round(avg_net / (1 + target_roi), 2) if avg_net is not None else "N/A"
                 
                 # Warnings
                 if n < 10:
@@ -161,18 +160,15 @@ if analyze_clicked:
                 st.success("Analysis Complete")
                 
                 st.markdown(f"""
-**120-Day Summary**
-
+**120-Day Summary**  
 **Valid Sales**: {n}  
 **Avg Sold Price**: £{avg_price:.2f}  
 **Median Sold Price**: £{med_price:.2f}  
 **Price Range**: £{min_p:.0f} – £{max_p:.0f}  
 **Trend**: {trend}  
-
 **Avg Net Payout**: £{avg_net:.2f}  
-**Avg Net (Last 10)**: £{avg_net_last10:.2f}
-
-**Average Days Between Sales**:
+**Avg Net (Last 10)**: £{avg_net_last10:.2f if avg_net_last10 is not None else 'N/A'}  
+**Average Days Between Sales**:  
 - All in last 120 days → **{avg_days_all if avg_days_all is not None else 'N/A'} days** (used for ROI)
                 """)
                 
@@ -181,5 +177,6 @@ if analyze_clicked:
                 
                 st.markdown(f"""
 **Target ROI**: {target_roi:.0%}  
-**Recommended Max Buy Price**: £{max_pay}
+**Recommended Max Buy Price**: £{max_pay}  
+*(calculated from 120-day Avg Net Payout)*
                 """)
