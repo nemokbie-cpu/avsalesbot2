@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import re
 from datetime import datetime, timedelta
@@ -233,7 +234,7 @@ if analyze_clicked:
 **Avg Net (Last 10)**: {format_net(avg_net_last10)}  
 **Average Days Between Sales**:  
 - All in last 120 days → **{avg_days_all if avg_days_all is not None else 'N/A'} days** (used for ROI)
-                    """.strip())
+""".strip())
 
                     if show_last_10 and avg_days_10 is not None:
                         st.markdown(f"- Last 10 sales → **{avg_days_10} days**")
@@ -242,12 +243,13 @@ if analyze_clicked:
 **Target ROI**: {target_roi:.0%}  
 **Recommended Max Buy Price**: £{max_pay}  
 *(based on 120-day Avg Net Payout)*
-                    """.strip())
+""".strip())
 
                     if instant_max_buy is not None:
                         st.markdown(f"""
 **Instant Sell Recommendation (25% ROI)**:  
 **Sell Now Net Payout**: {format_net(sell_now_net)}  
 **Recommended Max Buy Price**: £{instant_max_buy}
-                        """.strip())
+""".strip())
+```
                     """.strip())
