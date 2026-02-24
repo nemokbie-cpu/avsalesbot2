@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import re
 from datetime import datetime, timedelta
@@ -222,6 +221,7 @@ if analyze_clicked:
                     st.success("Analysis Complete")
 
                     # ── Results Display ───────────────────────
+                    # This is the block likely causing the issue—ensure indentation matches exactly (4 spaces)
                     st.markdown(f"""
 **120-Day Summary**
 
@@ -251,5 +251,4 @@ if analyze_clicked:
 **Sell Now Net Payout**: {format_net(sell_now_net)}  
 **Recommended Max Buy Price**: £{instant_max_buy}
 """.strip())
-```
                     """.strip())
