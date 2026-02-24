@@ -251,4 +251,4 @@ if analyze_clicked:
 **Sell Now Net Payout**: {format_net(sell_now_net)}  
 **Recommended Max Buy Price**: £{instant_max_buy}
 """.strip())
-                    """.strip())
+                
