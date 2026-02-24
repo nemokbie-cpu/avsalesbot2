@@ -15,10 +15,12 @@ def calculate_net(price: float) -> float:
         return price * 0.89 - 4
 
 
-def get_target_roi(avg_days: float | None) -> float:
-    """Determine target ROI % based on average days between sales."""
+def get_target_roi(avg_days: float | None, num_sales: int) -> float:
+    """Determine target ROI % based on average days between sales and number of sales."""
     if avg_days is None:
         return 0.45
+    if num_sales > 15 and avg_days < 15:
+        return 0.30
     if avg_days < 5:
         return 0.30
     elif 10 <= avg_days <= 15:
@@ -125,6 +127,15 @@ min_price = st.number_input(
     help="Only sales ≥ this price will be used (if filter enabled)"
 )
 
+st.subheader("Instant Sell Options")
+sell_now_price = st.number_input(
+    "Sell Now Price (£) - Optional for instant sell recommendation",
+    value=0.0,
+    min_value=0.0,
+    step=1.0,
+    help="Enter the immediate sell price for this SKU to get a 25% ROI buy recommendation."
+)
+
 col_clear, col_analyze = st.columns([1, 3])
 with col_clear:
     if st.button("Clear Data", use_container_width=True):
@@ -188,10 +199,18 @@ if analyze_clicked:
                     avg_days_all = calculate_avg_days(recent_sales)
                     avg_days_10 = calculate_avg_days(last_10_sales) if show_last_10 and len(last_10_sales) >= 2 else None
 
-                    target_roi = get_target_roi(avg_days_all)
+                    target_roi = get_target_roi(avg_days_all, n)
 
                     # Use overall 120-day avg net for recommendation
                     max_pay = round(avg_net / (1 + target_roi), 2) if avg_net is not None else "N/A"
+
+                    # Instant sell recommendation if sell_now_price provided
+                    instant_max_buy = None
+                    sell_now_net = None
+                    if sell_now_price > 0:
+                        sell_now_net = calculate_net(sell_now_price)
+                        instant_roi = 0.25
+                        instant_max_buy = round(sell_now_net / (1 + instant_roi), 2)
 
                     # Warnings
                     if n < 10:
@@ -223,4 +242,12 @@ if analyze_clicked:
 **Target ROI**: {target_roi:.0%}  
 **Recommended Max Buy Price**: £{max_pay}  
 *(based on 120-day Avg Net Payout)*
+                    """.strip())
+
+                    if instant_max_buy is not None:
+                        st.markdown(f"""
+**Instant Sell Recommendation (25% ROI)**:  
+**Sell Now Net Payout**: {format_net(sell_now_net)}  
+**Recommended Max Buy Price**: £{instant_max_buy}
+                        """.strip())
                     """.strip())
