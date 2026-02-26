@@ -15,18 +15,18 @@ def calculate_net(price: float) -> float:
         return price * 0.89 - 4
 
 
-def get_target_roi(avg_days: float | None, num_sales: int) -> float:
+def get_target_roi(avg_days: float | None, num_sales: int, quick_roi: float, jogging_roi: float, slow_roi: float) -> float:
     """Determine target ROI % based on average days between sales and number of sales."""
     if avg_days is None:
-        return 0.45
-    if num_sales > 15 and avg_days < 15:
-        return 0.30
-    if avg_days < 5:
-        return 0.30
-    elif 10 <= avg_days <= 15:
-        return 0.40
+        return slow_roi
+    if num_sales >= 15 and avg_days <= 15:
+        return quick_roi  # Quick sellers: 15+ sales, <=15 days
+    elif avg_days <= 15:
+        return jogging_roi  # Jogging sellers: <15 sales, <=15 days
+    elif num_sales < 5 and avg_days > 15:
+        return slow_roi  # Slow sellers: <5 sales, >15 days
     else:
-        return 0.45
+        return slow_roi  # Default fallback for others
 
 
 def parse_sales(raw_text: str) -> list[dict]:
@@ -107,6 +107,14 @@ def clear_data():
 st.sidebar.header("Settings")
 use_price_filter = st.sidebar.checkbox("Apply minimum price filter", value=False)
 show_last_10 = st.sidebar.checkbox("Show Last 10 sales stats", value=True)
+
+st.sidebar.header("ROI Parameters")
+instant_roi = st.sidebar.number_input("Instant Sellers ROI (%)", min_value=0.0, max_value=100.0, value=25.0, step=1.0) / 100.0
+quick_roi = st.sidebar.number_input("Quick Sellers ROI (%) (15+ sales, <=15 days)", min_value=0.0, max_value=100.0, value=30.0, step=1.0) / 100.0
+jogging_roi = st.sidebar.number_input("Jogging Sellers ROI (%) (<15 sales, <=15 days)", min_value=0.0, max_value=100.0, value=35.0, step=1.0) / 100.0
+slow_roi = st.sidebar.number_input("Slow Sellers ROI (%) (<5 sales, >15 days or fallback)", min_value=0.0, max_value=100.0, value=45.0, step=1.0) / 100.0
+
+manual_roi = st.sidebar.slider("Manual ROI Override (%) (0 = auto)", min_value=0, max_value=100, value=0, step=1) / 100.0
 
 # ── Main Area ─────────────────────────────────────
 data = st.text_area(
@@ -199,7 +207,9 @@ if analyze_clicked:
                     avg_days_all = calculate_avg_days(recent_sales)
                     avg_days_10 = calculate_avg_days(last_10_sales) if show_last_10 and len(last_10_sales) >= 2 else None
 
-                    target_roi = get_target_roi(avg_days_all, n)
+                    target_roi = get_target_roi(avg_days_all, n, quick_roi, jogging_roi, slow_roi)
+                    if manual_roi > 0:
+                        target_roi = manual_roi
 
                     # Use overall 120-day avg net for recommendation
                     max_pay = round(avg_net / (1 + target_roi), 2) if avg_net is not None else "N/A"
@@ -209,7 +219,6 @@ if analyze_clicked:
                     sell_now_net = None
                     if sell_now_price > 0:
                         sell_now_net = calculate_net(sell_now_price)
-                        instant_roi = 0.25
                         instant_max_buy = round(sell_now_net / (1 + instant_roi), 2)
 
                     # Warnings
@@ -221,7 +230,6 @@ if analyze_clicked:
                     st.success("Analysis Complete")
 
                     # ── Results Display ───────────────────────
-                    # This is the block likely causing the issue—ensure indentation matches exactly (4 spaces)
                     st.markdown(f"""
 **120-Day Summary**
 
@@ -247,8 +255,7 @@ if analyze_clicked:
 
                     if instant_max_buy is not None:
                         st.markdown(f"""
-**Instant Sell Recommendation (25% ROI)**:  
+**Instant Sell Recommendation ({instant_roi:.0%} ROI)**:  
 **Sell Now Net Payout**: {format_net(sell_now_net)}  
 **Recommended Max Buy Price**: £{instant_max_buy}
 """.strip())
-                
